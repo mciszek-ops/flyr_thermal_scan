@@ -23,3 +23,10 @@ python main_pipeline.py            # produces phalanx_temperatures_summary.csv
 python retry_failed_marker.py      # add --debug to save overlay images for QA
 ```
 Outputs `marker_retry_results.csv` and `phalanx_temperatures_summary_with_retry.csv` (with a `Detection_Method` column) in `digit_phalanx_results/`.
+
+### Tests
+```
+pip install pytest
+python -m pytest tests
+```
+`test_unit` / `test_component` / `test_integration` use synthetic images and a fake MediaPipe; `test_e2e` runs the real models on a real scan and is skipped if `raw_thermal_scans/` is not present.
