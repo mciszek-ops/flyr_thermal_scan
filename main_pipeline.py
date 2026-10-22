@@ -217,6 +217,12 @@ def process_scan(file_path: str):
     return summary_row
 
 
+def hand_side(file_path: str):
+    """Return 'Left' or 'Right' from the _LH/_RH filename suffix, or None if unknown."""
+    suffix = Path(file_path).stem.upper().rsplit("_", 1)[-1]
+    return {"LH": "Left", "RH": "Right"}.get(suffix)
+
+
 def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     os.makedirs(THERMAL_INPUT_DIR, exist_ok=True)
@@ -227,6 +233,7 @@ def main():
     all_results = []
     total_images_found = 0
     successful_detections = 0
+    hand_counts = {"Left": [0, 0], "Right": [0, 0]}  # [found, successful]
 
     # Process scans 
     for root, _, files in os.walk(THERMAL_INPUT_DIR):
@@ -234,13 +241,18 @@ def main():
             if file.lower().endswith((".jpg", ".jpeg", ".seq", ".tiff", ".flir")):
                 total_images_found += 1
                 file_path = os.path.join(root, file)
-                
+                side = hand_side(file_path)
+                if side:
+                    hand_counts[side][0] += 1
+
                 res = process_scan(file_path)
                 if res:
                     all_results.append(res)
                     # Count as success only if hand was detected
                     if res.get("D3_Proximal_Avg_C") != "NO HAND DETECTED - REVIEW IMAGE":
                         successful_detections += 1
+                        if side:
+                            hand_counts[side][1] += 1
 
     print(f"\nTotal Scans Found:       {total_images_found}")
     print(f"Successful Detections:   {successful_detections}")
@@ -251,6 +263,24 @@ def main():
         print(f"Detection Success Rate:  {success_rate:.2f}%")
     else:
         print("Detection Success Rate:  0.00% (No valid image files found)")
+
+    # Left vs right hand comparison
+    print("\nLeft vs Right Hand Detection:")
+    print(f"{'Hand':<8}{'Found':>8}{'Success':>10}{'Failed':>9}{'Rate':>10}")
+    hand_rates = {}
+    for side, (found, ok) in hand_counts.items():
+        rate = (ok / found) * 100 if found else 0.0
+        hand_rates[side] = rate
+        print(f"{side:<8}{found:>8}{ok:>10}{found - ok:>9}{rate:>9.2f}%")
+
+    if all(hand_counts[side][0] for side in hand_counts):
+        diff = hand_rates["Right"] - hand_rates["Left"]
+        if diff > 0:
+            print(f"Right hands detected {diff:.2f} percentage points more often than left hands.")
+        elif diff < 0:
+            print(f"Left hands detected {-diff:.2f} percentage points more often than right hands.")
+        else:
+            print("Left and right hands have identical detection rates.")
 
     # Save results to CSV
     if all_results:
