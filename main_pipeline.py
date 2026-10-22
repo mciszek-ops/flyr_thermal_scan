@@ -1,4 +1,5 @@
 import os
+import shutil
 import zipfile
 from pathlib import Path
 import cv2
@@ -50,6 +51,7 @@ MIN_BAND_WIDTH_PX = 6  # floor for side-on hands, where knuckles overlap
 
 THERMAL_INPUT_DIR = "raw_thermal_scans"
 OUTPUT_DIR = "digit_phalanx_results"
+FAILED_IMAGES_DIR = os.path.join(OUTPUT_DIR, "failed_images")
 
 def extract_zip_files():
     zip_files = ["LHand(1).zip", "RHand(1).zip"]
@@ -223,8 +225,16 @@ def hand_side(file_path: str):
     return {"LH": "Left", "RH": "Right"}.get(suffix)
 
 
+def save_failed_image(file_path: str):
+    """Copy a scan that failed processing into FAILED_IMAGES_DIR for manual review."""
+    shutil.copy2(file_path, os.path.join(FAILED_IMAGES_DIR, os.path.basename(file_path)))
+
+
 def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
+    # Start each run with an empty failed folder so it only reflects this run
+    shutil.rmtree(FAILED_IMAGES_DIR, ignore_errors=True)
+    os.makedirs(FAILED_IMAGES_DIR)
     os.makedirs(THERMAL_INPUT_DIR, exist_ok=True)
     
     # Extract archive files
@@ -253,10 +263,15 @@ def main():
                         successful_detections += 1
                         if side:
                             hand_counts[side][1] += 1
+                    else:
+                        save_failed_image(file_path)
+                else:
+                    save_failed_image(file_path)
 
     print(f"\nTotal Scans Found:       {total_images_found}")
     print(f"Successful Detections:   {successful_detections}")
     print(f"Failed / Flagged Scans:  {total_images_found - successful_detections}")
+    print(f"Failed scans copied to:  {FAILED_IMAGES_DIR}")
 
     if total_images_found > 0:
         success_rate = (successful_detections / total_images_found) * 100
