@@ -1,7 +1,7 @@
 # flyr_thermal_scan
 Batch-processing Python script to detect hand landmarks across a 3,000+ thermal images. 
 
-# FLIR Thermal Phalanx Extraction Pipeline
+# FLYR Thermal Phalanx Extraction Pipeline
 
 A production-ready Python pipeline for extracting mean temperatures (°C) from specific finger phalanx segments (Digits 3 & 5) using FLIR radiometric images.
 
